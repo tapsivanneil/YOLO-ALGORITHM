@@ -4,14 +4,15 @@ import cvzone
 import math
 
 # For Webcam
-cap = cv2.VideoCapture(0)
-cap.set(3, 1280)
-cap.set(4, 720)
+# cap = cv2.VideoCapture(0)
+# cap.set(3, 1280)
+# cap.set(4, 720)
+
 
 # For video file
-# cap = cv2.VideoCapture('Chapter 6 - YOLO WEBCAM\Videos\cars.mp4')
+cap = cv2.VideoCapture('Chapter 6 - YOLO WEBCAM\Videos\cars.mp4')
 
-
+mask = cv2.imread('Project 1 - Car Counter\mask.png')
 model = YOLO('yolov8n.pt')
 
 classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
@@ -26,11 +27,16 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
               "teddy bear", "hair drier", "toothbrush"
               ]
  
-
-
 while True:
     success, img = cap.read()
-    results = model(img, stream=True)
+
+    # adding mask and applying in the img
+    imgRegion = cv2.bitwise_and(img, mask)
+
+    # getting the detected results
+    results = model(imgRegion, stream=True)
+
+
     for r in results:
         boxes = r.boxes
         for box in boxes:
@@ -45,17 +51,23 @@ while True:
             x1,y1,x2,y2 = box.xyxy[0]
             x1,y1,x2,y2 = int(x1), int(y1), int(x2), int(y2)
             w, h = x2 - x1, y2 - y1
-            cvzone.cornerRect(img, (x1, y1, w, h))
-            
+
 
             # rounded confidence level
             conf = math.ceil(box.conf[0] *100 )/ 100
-                                                # prevents out of bounds conf
-            
             cls = int(box.cls[0])
-                                    
+
+            currentClass = classNames[cls]
+
+            # selects only with the given class names and given that their confidence value is higher than the said values
+
+            if currentClass == "car" or currentClass == "bus" or currentClass == "motorbike" and conf > 0.3:    
+                                # source -    bbox    -   line length
+                cvzone.cornerRect(img, (x1, y1, w, h), l= 9)        
                                     # accessing the class - confidence value - bounding box limit  - size
-            cvzone.putTextRect(img, f'{classNames[cls]} {conf}', (max(0,x1) ,max(35,y1)), scale = 1, thickness=1)
+                cvzone.putTextRect(img, f'{classNames[cls]} {conf}', (max(0,x1) ,max(35,y1)), scale = 1, thickness=1, offset=5)
+            
+        
             # print values
             
             # confidence
@@ -65,4 +77,5 @@ while True:
             # print(x1,y1,w,h)
 
     cv2.imshow("Image", img)
+    cv2.imshow("ImageRegion", imgRegion)
     cv2.waitKey(1)
